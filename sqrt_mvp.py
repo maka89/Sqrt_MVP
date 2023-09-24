@@ -66,7 +66,9 @@ class Pade:
         
     def set_mat(self,C):
         if self.eye is None or self.eye.size()!=C.size():
-            self.eye=torch.zeros_like(C)+torch.eye(C.size()[-1])
+            idm = torch.zeros_like((C.reshape(-1,C.size()[-2],C.size()[-1]))[0])
+            idm = idm.fill_diagonal_(1.0)
+            self.eye=torch.zeros_like(C)+idm   
 
         self.scale = torch.sqrt(torch.sum(C**2,dim=(-2,-1),keepdims=True))
         self.C = C/self.scale
@@ -90,7 +92,9 @@ class Taylor:
         
     def set_mat(self,C):
         if self.eye is None or self.eye.size()!=C.size():
-            self.eye=torch.zeros_like(C)+torch.eye(C.size()[-1])        
+            idm = torch.zeros_like((C.reshape(-1,C.size()[-2],C.size()[-1]))[0])
+            idm = idm.fill_diagonal_(1.0)
+            self.eye=torch.zeros_like(C)+idm    
         
         self.scale = torch.sqrt(torch.sum(C**2,dim=(-2,-1),keepdims=True))
         self.C = C/self.scale
@@ -114,7 +118,7 @@ if __name__=="__main__":
             a=0.5
         return  torch.matmul(q,w**a*torch.transpose(q,-1,-2))
     
-    #torch.set_default_dtype(torch.float64)
+    torch.set_default_dtype(torch.float64)
     torch.manual_seed(0)
     N=50
     inv = False
