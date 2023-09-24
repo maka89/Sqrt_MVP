@@ -118,7 +118,7 @@ if __name__=="__main__":
             a=0.5
         return  torch.matmul(q,w**a*torch.transpose(q,-1,-2))
     
-    torch.set_default_dtype(torch.float64)
+    #torch.set_default_dtype(torch.float64)
     torch.manual_seed(0)
     N=50
     inv = False
