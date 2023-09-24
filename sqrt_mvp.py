@@ -56,47 +56,48 @@ def pade_series(n=5,inverse=False):
     return a,b
     
 class Pade:
-    def __init__(self,n_terms,inverse,C):
+    def __init__(self,n_terms,inverse):
         self.a,self.b = pade_series(n_terms,inverse)
         assert(self.a[0]==1.0)
         assert(self.b[0]==1.0)
         self.inverse = inverse
+        self.eye=None
         
-        self.eye=torch.zeros_like(C)+torch.eye(C.size()[-1])
         
     def set_mat(self,C):
-        
+        if self.eye is None or self.eye.size()!=C.size():
+            self.eye=torch.zeros_like(C)+torch.eye(C.size()[-1])
+            print("HELLO Pade")
         self.scale = torch.sqrt(torch.sum(C**2,dim=(-2,-1),keepdims=True))
         self.C = C/self.scale
         self.Q=pow_seriest(self.b,self.C,self.eye)
         self.sqrt_scale = torch.sqrt(self.scale)
-    def matvec(self,C,x):
-        self.set_mat(C)
+    def matvec(self,x):
         u = pow_series_mv_t(self.a,self.C,x)
-        
-        
         u = torch.linalg.solve(self.Q,u)
-        #L,info=torch.linalg.cholesky_ex(self.Q,upper=False)
-        #v = torch.linalg.solve_triangular(L,u,upper=False)
-        #u = torch.linalg.solve_triangular(torch.transpose(L,-1,-2),v,upper=True)
         
         if self.inverse:
             return u/self.sqrt_scale
         else:
             return u*self.sqrt_scale
+            
 
 class Taylor:
-    def __init__(self,n_terms,inverse,C):
+    def __init__(self,n_terms,inverse):
         self.t = ps_coefs(n_terms,inverse)
         self.inverse = inverse
-        self.eye=torch.zeros_like(C)+torch.eye(C.size()[-1])
+        self.eye=None
+        
     def set_mat(self,C):
+        if self.eye is None or self.eye.size()!=C.size():
+            self.eye=torch.zeros_like(C)+torch.eye(C.size()[-1])
+            print("HELLO Taylor")
+        
         
         self.scale = torch.sqrt(torch.sum(C**2,dim=(-2,-1),keepdims=True))
         self.C = C/self.scale
         self.sqrt_scale = torch.sqrt(self.scale)
-    def matvec(self,C,x):
-        self.set_mat(C)
+    def matvec(self,x):
         u = pow_series_mv_t(self.t,self.C,x)
         if self.inverse:
             return u/self.sqrt_scale
@@ -116,21 +117,24 @@ if __name__=="__main__":
         return  torch.matmul(q,w**a*torch.transpose(q,-1,-2))
     
     #torch.set_default_dtype(torch.float64)
+    torch.manual_seed(0)
     N=50
     inv = False
     X=torch.randn(100,100,N)
     v=torch.randn(100,N,1)
     C=torch.matmul(torch.transpose(X,-1,-2),X)
     
-    p = Pade(6,inv,C)
-    t = Taylor(20,inv,C)
-    
+    p = Pade(6,inv)
+    t = Taylor(20,inv)
+    t.set_mat(C)
     sq1 = sqrt(C,inv)
     
-    pv = p.matvec(C,v)
+    p.set_mat(C)
+
+    pv = p.matvec(v)
 
     print("Pade: ",torch.mean(torch.linalg.norm(sq1@v-pv,dim=(-2,-1)) ))
-    print("Taylor: ", torch.mean(torch.linalg.norm(sq1@v-t.matvec(C,v),dim=(-2,-1)) ))
+    print("Taylor: ", torch.mean(torch.linalg.norm(sq1@v-t.matvec(v),dim=(-2,-1)) ))
     
     from torch_utils import *
     FastMatSqrt = MPA_Lya.apply
@@ -140,5 +144,5 @@ if __name__=="__main__":
     else:
         sq2 = FastMatSqrt(C)
     print("Pade FastDiffSqrt: ",torch.mean(torch.linalg.norm(sq2@v-sq1@v,dim=(-2,-1)) ))
-    print("Pade FastDiffSqrt - Pade : ",torch.mean(torch.linalg.norm(sq2@v-p.matvec(C,v),dim=(-2,-1)) ))
+    print("Pade FastDiffSqrt - Pade : ",torch.mean(torch.linalg.norm(sq2@v-p.matvec(v),dim=(-2,-1)) ))
     
