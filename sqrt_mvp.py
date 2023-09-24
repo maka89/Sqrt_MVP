@@ -122,8 +122,8 @@ if __name__=="__main__":
     torch.manual_seed(0)
     N=50
     inv = False
-    X=torch.randn(3*40*100,100,N)
-    v=torch.randn(3*40*100,N,1)
+    X=torch.randn(100,N)
+    v=torch.randn(N,1)
     C=torch.matmul(torch.transpose(X,-1,-2),X)
     
     p = Pade(6,inv)
