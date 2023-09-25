@@ -83,46 +83,6 @@ class Pade:
         else:
             return u*self.sqrt_scale
             
-class Pade2:
-    def __init__(self,n_terms,inverse):
-        self.a,self.b = pade_series(n_terms,inverse)
-        assert(self.a[0]==1.0)
-        assert(self.b[0]==1.0)
-        self.inverse = inverse
-        self.eye=None
-        self.Qi=None
-        
-    def set_mat(self,C,quick_update=False):
-        if self.eye is None or self.eye.size()!=C.size():
-            idm = torch.zeros_like((C.reshape(-1,C.size()[-2],C.size()[-1]))[0])
-            idm = idm.fill_diagonal_(1.0)
-            self.eye=torch.zeros_like(C)+idm   
-
-        self.scale = torch.sqrt(torch.sum(C**2,dim=(-2,-1),keepdims=True))
-        self.C = C/self.scale
-        
-        Q  = pow_seriest(self.b,self.C,self.eye)
-        
-        if quick_update:
-            self.Qi = self.newton_iteration_(Q,self.Qi)
-        else:
-            self.Qi = torch.linalg.inv(Q)
-        
-        self.sqrt_scale = torch.sqrt(self.scale)
-    def newton_iteration_(self,A,X0,niter=1):
-        X=X0
-        for i in range(0,niter):
-            X= 2.0*X-X@A@X
-        return X
-    
-    def matvec(self,x):
-        u = pow_series_mv_t(self.a,self.C,x)
-        u = torch.matmul(self.Qi,u)
-        
-        if self.inverse:
-            return u/self.sqrt_scale
-        else:
-            return u*self.sqrt_scale
             
 class Taylor:
     def __init__(self,n_terms,inverse):
